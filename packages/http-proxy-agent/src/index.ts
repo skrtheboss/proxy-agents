@@ -126,7 +126,7 @@ export class HttpProxyAgent<Uri extends string> extends Agent {
 		req: HttpProxyAgentClientRequest,
 		opts: AgentConnectOpts
 	): Promise<net.Socket> {
-		req._header = null;
+		// req._header = null;
 
 		if (!req.path.includes('://')) {
 			this.setRequestProps(req, opts);
@@ -138,7 +138,7 @@ export class HttpProxyAgent<Uri extends string> extends Agent {
 		let first: string;
 		let endOfHeaders: number;
 		debug('Regenerating stored HTTP header string for request');
-		req._implicitHeader();
+		// req._implicitHeader();
 		if (req.outputData && req.outputData.length > 0) {
 			debug(
 				'Patching connection write() output buffer with updated header'

@@ -7,6 +7,7 @@ import { createProxy, ProxyServer } from 'proxy';
 import { listen } from 'async-listen';
 import { json, req } from 'agent-base';
 import { HttpProxyAgent } from '../src';
+import axios from 'axios';
 
 describe('HttpProxyAgent', () => {
 	let httpServer: http.Server;
@@ -21,6 +22,17 @@ describe('HttpProxyAgent', () => {
 	beforeAll(async () => {
 		// setup HTTP proxy server
 		proxy = createProxy();
+		// https://nodejs.org/api/http.html#event-clienterror
+		proxy.on('clientError', (err, socket) => {
+			if (
+				('code' in err && err.code === 'ECONNRESET') ||
+				!socket.writable
+			) {
+				return;
+			}
+
+			socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+		});
 		proxyUrl = await listen(proxy);
 	});
 
@@ -232,6 +244,23 @@ describe('HttpProxyAgent', () => {
 			} finally {
 				agent.destroy();
 			}
+		});
+	});
+	describe('"axios" module', () => {
+		it('should work over an HTTP proxy', async () => {
+			// set HTTP "request" event handler for this test
+			httpServer.once('request', (req, res) => {
+				res.end(JSON.stringify(req.headers));
+			});
+
+			const agent = new HttpProxyAgent(proxyUrl);
+			const { data } = await axios.post(
+				httpServerUrl.toString(),
+				{ test: 55 },
+				{ httpAgent: agent }
+			);
+			expect(data.host).toEqual(httpServerUrl.host);
+			assert('via' in data);
 		});
 	});
 });
